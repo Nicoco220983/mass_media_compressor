@@ -112,6 +112,10 @@ class MassMediaCompressor:
         if ifpath != ofpath and os.path.isfile(ofpath):
             return "SKIPPED"
         ftype = filetype.guess(ifpath)
+        if ftype is None:
+            if self.copy_unhandled and copy_file(ifpath, ofpath):
+                return "COPIED"
+            return "SKIPPED"
         mime = ftype.mime
         media = None
         if mime.startswith("image/"):
@@ -172,7 +176,7 @@ class ImageMedia(Media):
         else:
             return
         cmd = [
-            "ffmpeg",
+            shutil.which("ffmpeg"),
             "-i", self.ifpath,
             "-filter:v", f"scale={width}:{height}",
             ofpath,
@@ -186,17 +190,15 @@ class ImageMedia(Media):
 
     @lru_cache
     def get_img_resolution(self) -> tuple[int, int]:
-        res = subprocess.run(
-            [
-                "ffprobe",
-                "-v", "error",
-                "-select_streams", "v:0",
-                "-show_entries", "stream=width,height",
-                "-of", "csv=s=x:p=0",
-                self.ifpath
-            ],
-            capture_output=True,
-        )
+        cmd = [
+            shutil.which("ffprobe"),
+            "-v", "error",
+            "-select_streams", "v:0",
+            "-show_entries", "stream=width,height",
+            "-of", "csv=s=x:p=0",
+            self.ifpath
+        ]
+        res = subprocess.run(cmd, capture_output=True)
         assert res.returncode == 0
         infos = res.stdout.decode("utf-8").split("x")
         width = int(infos[0])
@@ -228,7 +230,7 @@ class VideoMedia(Media):
         else:
             return
         cmd = [
-            "ffmpeg",
+            shutil.which("ffmpeg"),
             "-i", self.ifpath,
             "-vcodec", "libx265",
             "-crf", str(self.mmc.video_target_crf),
@@ -246,7 +248,7 @@ class VideoMedia(Media):
     def get_video_infos(self) -> tuple[int, int, float, int]:
         res = subprocess.run(
             [
-                "ffprobe",
+                shutil.which("ffprobe"),
                 "-v", "error",
                 "-select_streams", "v:0",
                 "-show_entries", "stream=width,height",
