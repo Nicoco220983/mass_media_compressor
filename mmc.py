@@ -272,7 +272,7 @@ def copy_file(ifpath, ofpath):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument('filename')
+    parser.add_argument('input', nargs='?')
     parser.add_argument('--overwrite', action='store_true')
     parser.add_argument('--not-copy-unhandled', action='store_true')
     parser.add_argument('--not-copy-failed', action='store_true')
@@ -283,6 +283,10 @@ if __name__ == "__main__":
     parser.add_argument('-o', '--output')
     parser.add_argument('-l', '--log', type=str)
     args = parser.parse_args()
+    input_path = args.input
+    if not input_path:
+        res = input('Write path of (or simply drag and drop) directory to process:\n')
+        input_path = res.strip('"')
     try:
         mmc = MassMediaCompressor(
             copy_unhandled=(not args.not_copy_unhandled),
@@ -293,7 +297,7 @@ if __name__ == "__main__":
             video_target_crf=args.video_target_crf,
             log_file=args.log,
         )
-        mmc.run(args.filename, args.output, overwrite=args.overwrite)
+        mmc.run(input_path, args.output, overwrite=args.overwrite)
     except BadArgumentError as err:
         print("ERROR", err, file=sys.stderr)
         sys.exit(1)
